@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Regresión Lineal Múltiple en 3D</title>
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Plotly.js CDN -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body class="bg-gray-100">
+
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold text-center mb-4">Regresión Lineal Múltiple en 3D</h1>
+
+    <!-- Controles -->
+    <div class="flex flex-col md:flex-row justify-around mb-8">
+      <div class="mb-4 md:mb-0">
+        <label class="block mb-2 font-medium">Coeficiente β₁ (X): <span id="beta1Value">1</span></label>
+        <input id="beta1" type="range" min="-10" max="10" value="1" step="0.1" class="w-full">
+      </div>
+      <div class="mb-4 md:mb-0">
+        <label class="block mb-2 font-medium">Coeficiente β₂ (Y): <span id="beta2Value">1</span></label>
+        <input id="beta2" type="range" min="-10" max="10" value="1" step="0.1" class="w-full">
+      </div>
+      <div>
+        <label class="block mb-2 font-medium">Intercepto β₀: <span id="beta0Value">0</span></label>
+        <input id="beta0" type="range" min="-10" max="10" value="0" step="0.1" class="w-full">
+      </div>
+    </div>
+
+    <!-- MSE -->
+    <div class="text-center mb-4">
+      <p class="font-medium">Error Cuadrático Medio (MSE): <span id="mseValue">Calculando...</span></p>
+    </div>
+
+    <!-- Gráfica -->
+    <div id="plot" class="w-full h-96"></div>
+  </div>
+
+  <script>
+    // Datos de ejemplo
+    const dataPoints = [
+      { x: 1, y: 2, z: 3 },
+      { x: 2, y: 1, z: 4 },
+      { x: 3, y: 4, z: 5 },
+      { x: 4, y: 3, z: 6 },
+      { x: 5, y: 5, z: 7 },
+      { x: 6, y: 4, z: 8 },
+      { x: 7, y: 6, z: 9 },
+      { x: 8, y: 5, z: 10 }
+    ];
+
+    // Variables globales para la cámara
+    let camera = null;
+
+    // Función para calcular el MSE
+    function calculateMSE(beta0, beta1, beta2) {
+      let mse = 0;
+      dataPoints.forEach(point => {
+        const zPred = beta0 + beta1 * point.x + beta2 * point.y;
+        mse += Math.pow(point.z - zPred, 2);
+      });
+      return (mse / dataPoints.length).toFixed(4);
+    }
+
+    // Función para actualizar la gráfica
+    function updatePlot() {
+      // Obtener valores de los coeficientes
+      const beta0 = parseFloat(document.getElementById('beta0').value);
+      const beta1 = parseFloat(document.getElementById('beta1').value);
+      const beta2 = parseFloat(document.getElementById('beta2').value);
+
+      // Actualizar etiquetas de los coeficientes
+      document.getElementById('beta0Value').innerText = beta0;
+      document.getElementById('beta1Value').innerText = beta1;
+      document.getElementById('beta2Value').innerText = beta2;
+
+      // Calcular MSE y actualizar etiqueta
+      const mse = calculateMSE(beta0, beta1, beta2);
+      document.getElementById('mseValue').innerText = mse;
+
+      // Generar plano de regresión
+      const planeSize = 10;
+      const planeResolution = 10;
+      const xRange = Array.from({ length: planeResolution }, (_, i) => i * planeSize / planeResolution);
+      const yRange = Array.from({ length: planeResolution }, (_, i) => i * planeSize / planeResolution);
+      const zData = [];
+      for (let i = 0; i < xRange.length; i++) {
+        const zRow = [];
+        for (let j = 0; j < yRange.length; j++) {
+          const zValue = beta0 + beta1 * xRange[i] + beta2 * yRange[j];
+          zRow.push(zValue);
+        }
+        zData.push(zRow);
+      }
+
+      // Datos de los puntos
+      const scatterData = {
+        x: dataPoints.map(p => p.x),
+        y: dataPoints.map(p => p.y),
+        z: dataPoints.map(p => p.z),
+        mode: 'markers',
+        type: 'scatter3d',
+        marker: { color: 'blue', size: 5 },
+        name: 'Puntos de Datos'
+      };
+
+      // Datos del plano de regresión
+      const surfaceData = {
+        x: xRange,
+        y: yRange,
+        z: zData,
+        type: 'surface',
+        opacity: 0.5,
+        colorscale: 'Viridis',
+        showscale: false,
+        name: 'Plano de Regresión'
+      };
+
+      // Rango dinámico de los ejes
+      const xValues = dataPoints.map(p => p.x);
+      const yValues = dataPoints.map(p => p.y);
+      const zValues = dataPoints.map(p => p.z);
+      const axisRange = (values) => [Math.min(...values) - 1, Math.max(...values) + 1];
+
+      // Configuración de la gráfica
+      const layout = {
+        scene: {
+          xaxis: { title: 'X', range: axisRange(xValues) },
+          yaxis: { title: 'Y', range: axisRange(yValues) },
+          zaxis: { title: 'Z', range: axisRange(zValues) },
+          camera: camera || { projection: { type: 'perspective' } }
+        },
+        margin: { l: 0, r: 0, b: 0, t: 0 }
+      };
+
+      // Guardar estado de la cámara si ya existe
+      const plotDiv = document.getElementById('plot');
+      if (plotDiv.data) {
+        camera = plotDiv.layout.scene.camera;
+      }
+
+      // Dibujar la gráfica
+      Plotly.newPlot('plot', [scatterData, surfaceData], layout, { responsive: true });
+
+      // Actualizar estado de la cámara después de dibujar
+      const updatedPlotDiv = document.getElementById('plot');
+      updatedPlotDiv.on('plotly_relayout', function(eventdata){
+        camera = eventdata['scene.camera'];
+      });
+    }
+
+    // Eventos para los controles deslizantes
+    document.getElementById('beta0').addEventListener('input', updatePlot);
+    document.getElementById('beta1').addEventListener('input', updatePlot);
+    document.getElementById('beta2').addEventListener('input', updatePlot);
+
+    // Inicializar la gráfica
+    updatePlot();
+  </script>
+</body>
+</html>

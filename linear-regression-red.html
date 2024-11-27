@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Clasificación con Curvas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f4f4f4;
+            font-family: 'Arial', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto p-8 bg-white shadow-2xl rounded-xl">
+        <h1 class="text-3xl font-bold text-center mb-6 text-blue-600">
+            Clasificación con Curvas y Regresiones
+        </h1>
+        
+        <!-- Gráficas individuales -->
+        <div class="grid grid-cols-3 gap-4">
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <canvas id="plotChart1" class="w-full h-40"></canvas>
+                <div class="mt-4">
+                    <label>Pendiente: <span id="slope1Value">1.00</span></label>
+                    <input id="slope1Slider" type="range" min="-5" max="5" step="0.1" value="1" class="w-full">
+                    <label>Intersección: <span id="intercept1Value">0.00</span></label>
+                    <input id="intercept1Slider" type="range" min="-10" max="10" step="0.1" value="0" class="w-full">
+                </div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <canvas id="plotChart2" class="w-full h-40"></canvas>
+                <div class="mt-4">
+                    <label>Pendiente: <span id="slope2Value">1.00</span></label>
+                    <input id="slope2Slider" type="range" min="-5" max="5" step="0.1" value="1" class="w-full">
+                    <label>Intersección: <span id="intercept2Value">0.00</span></label>
+                    <input id="intercept2Slider" type="range" min="-10" max="10" step="0.1" value="0" class="w-full">
+                </div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <canvas id="plotChart3" class="w-full h-40"></canvas>
+                <div class="mt-4">
+                    <label>Pendiente: <span id="slope3Value">1.00</span></label>
+                    <input id="slope3Slider" type="range" min="-5" max="5" step="0.1" value="1" class="w-full">
+                    <label>Intersección: <span id="intercept3Value">0.00</span></label>
+                    <input id="intercept3Slider" type="range" min="-10" max="10" step="0.1" value="0" class="w-full">
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfica combinada -->
+        <div class="bg-blue-50 p-4 rounded-lg mt-8">
+            <canvas id="combinedChart" class="w-full h-64"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Generar datos para dos grupos
+        const generateGroupData = (centerX, centerY, points, spread, color) => {
+            return Array.from({ length: points }, () => ({
+                x: centerX + (Math.random() - 0.5) * spread,
+                y: centerY + (Math.random() - 0.5) * spread,
+                color: color
+            }));
+        };
+
+        const group1 = generateGroupData(10, 10, 50, 5, 'red');
+        const group2 = generateGroupData(20, 20, 50, 5, 'green');
+        const allData = [...group1, ...group2];
+
+        // Función ReLU
+        const relu = (x) => Math.max(0, x);
+
+        let slope1 = 1, intercept1 = 0;
+        let slope2 = 1, intercept2 = 0;
+        let slope3 = 1, intercept3 = 0;
+
+        const plotChart1 = document.getElementById('plotChart1');
+        const plotChart2 = document.getElementById('plotChart2');
+        const plotChart3 = document.getElementById('plotChart3');
+        const combinedChartCanvas = document.getElementById('combinedChart');
+        let chart1 = null, chart2 = null, chart3 = null, combinedChart = null;
+
+        const createChart = (ctx, regressionData, title) => {
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Línea de Regresión',
+                            data: regressionData,
+                            borderColor: 'blue',
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    animation: false,
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: title
+                        }
+                    },
+                    scales: {
+                        x: { type: 'linear', position: 'bottom' },
+                        y: { type: 'linear' }
+                    }
+                }
+            });
+        };
+
+        const updateCharts = () => {
+            const regressionData1 = Array.from({ length: 30 }, (_, x) => ({
+                x,
+                y: relu(slope1 * x + intercept1)
+            }));
+            const regressionData2 = Array.from({ length: 30 }, (_, x) => ({
+                x,
+                y: relu(slope2 * x + intercept2)
+            }));
+            const regressionData3 = Array.from({ length: 30 }, (_, x) => ({
+                x,
+                y: relu(slope3 * x + intercept3)
+            }));
+
+            if (chart1) chart1.destroy();
+            chart1 = createChart(plotChart1, regressionData1, 'Regresión 1');
+
+            if (chart2) chart2.destroy();
+            chart2 = createChart(plotChart2, regressionData2, 'Regresión 2');
+
+            if (chart3) chart3.destroy();
+            chart3 = createChart(plotChart3, regressionData3, 'Regresión 3');
+
+            if (combinedChart) combinedChart.destroy();
+            combinedChart = new Chart(combinedChartCanvas, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        { label: 'Grupo 1', data: group1, backgroundColor: 'red', pointRadius: 4 },
+                        { label: 'Grupo 2', data: group2, backgroundColor: 'green', pointRadius: 4 },
+                        {
+                            label: 'Curva Combinada',
+                            data: regressionData1.map((point, i) => ({
+                                x: point.x,
+                                y: relu(point.y + regressionData2[i].y + regressionData3[i].y)
+                            })),
+                            type: 'line',
+                            borderColor: 'purple',
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    animation: false,
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Gráfica Final'
+                        }
+                    },
+                    scales: {
+                        x: { type: 'linear', position: 'bottom' },
+                        y: { type: 'linear' }
+                    }
+                }
+            });
+        };
+
+        document.getElementById('slope1Slider').addEventListener('input', e => {
+            slope1 = parseFloat(e.target.value);
+            document.getElementById('slope1Value').textContent = slope1.toFixed(2);
+            updateCharts();
+        });
+
+        document.getElementById('intercept1Slider').addEventListener('input', e => {
+            intercept1 = parseFloat(e.target.value);
+            document.getElementById('intercept1Value').textContent = intercept1.toFixed(2);
+            updateCharts();
+        });
+
+        document.getElementById('slope2Slider').addEventListener('input', e => {
+            slope2 = parseFloat(e.target.value);
+            document.getElementById('slope2Value').textContent = slope2.toFixed(2);
+            updateCharts();
+        });
+
+        document.getElementById('intercept2Slider').addEventListener('input', e => {
+            intercept2 = parseFloat(e.target.value);
+            document.getElementById('intercept2Value').textContent = intercept2.toFixed(2);
+            updateCharts();
+        });
+
+        document.getElementById('slope3Slider').addEventListener('input', e => {
+            slope3 = parseFloat(e.target.value);
+            document.getElementById('slope3Value').textContent = slope3.toFixed(2);
+            updateCharts();
+        });
+
+        document.getElementById('intercept3Slider').addEventListener('input', e => {
+            intercept3 = parseFloat(e.target.value);
+            document.getElementById('intercept3Value').textContent = intercept3.toFixed(2);
+            updateCharts();
+        });
+
+        updateCharts();
+    </script>
+</body>
+</html>

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Perceptrón Interactivo Mejorado</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .controls, .graphs, .output-group {
+            background: #fff;
+            padding: 20px;
+            margin: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .controls {
+            max-width: 400px;
+            flex: 1 1 300px;
+        }
+        .graphs {
+            position: relative;
+            flex: 1 1 400px;
+            text-align: center;
+        }
+        .output-group {
+            flex: 1 1 200px;
+            max-width: 200px;
+        }
+        .group {
+            margin-bottom: 30px;
+        }
+        .group h2 {
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+            margin-bottom: 20px;
+        }
+        .slider-group {
+            margin-bottom: 20px;
+        }
+        .slider-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .slider-group input[type="range"] {
+            width: 100%;
+        }
+        .output {
+            text-align: center;
+            font-size: 24px;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        /* Estilos para el combo box moderno */
+        .custom-select {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        .custom-select select {
+            display: none; /* Ocultamos el select original */
+        }
+        .select-selected {
+            background-color: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+        .select-selected:after {
+            content: "";
+            position: absolute;
+            right: 10px;
+            top: 16px;
+            border: 6px solid transparent;
+            border-color: #555 transparent transparent transparent;
+        }
+        .select-selected.select-arrow-active:after {
+            border-color: transparent transparent #555 transparent;
+            top: 10px;
+        }
+        .select-items {
+            position: absolute;
+            background-color: #eee;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 99;
+            border-radius: 4px;
+            overflow: hidden;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none; /* Ocultamos la lista por defecto */
+        }
+        .select-items div {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .select-items div:hover {
+            background-color: #ddd;
+        }
+        /* Canvas de dibujo */
+        #drawingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: none;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Perceptrón Interactivo Mejorado</h1>
+    <div class="container">
+        <div class="controls">
+            <!-- Grupo de Entradas -->
+            <div class="group">
+                <h2>Entradas</h2>
+                <div class="slider-group">
+                    <label for="input1">Entrada X₁: <span id="input1Value">0</span></label>
+                    <input type="range" id="input1" min="-10" max="10" step="0.1" value="0">
+                </div>
+                <div class="slider-group">
+                    <label for="input2">Entrada X₂: <span id="input2Value">0</span></label>
+                    <input type="range" id="input2" min="-10" max="10" step="0.1" value="0">
+                </div>
+            </div>
+            <!-- Grupo de Parámetros -->
+            <div class="group">
+                <h2>Parámetros</h2>
+                <div class="slider-group">
+                    <label for="weight1">Peso W₁: <span id="weight1Value">1</span></label>
+                    <input type="range" id="weight1" min="-20" max="20" step="0.1" value="1">
+                </div>
+                <div class="slider-group">
+                    <label for="weight2">Peso W₂: <span id="weight2Value">1</span></label>
+                    <input type="range" id="weight2" min="-20" max="20" step="0.1" value="1">
+                </div>
+                <div class="slider-group">
+                    <label for="bias">Bias (θ): <span id="biasValue">0</span></label>
+                    <input type="range" id="bias" min="-30" max="30" step="0.1" value="0">
+                </div>
+                <div class="slider-group">
+                    <label for="activation">Función de Activación:</label>
+                    <div class="custom-select" id="activationSelect">
+                        <select id="activation">
+                            <option value="step">Escalón</option>
+                            <option value="sigmoid">Sigmoide</option>
+                            <option value="relu">ReLU</option>
+                        </select>
+                        <div class="select-selected"></div>
+                        <div class="select-items">
+                            <div data-value="step">Escalón</div>
+                            <div data-value="sigmoid">Sigmoide</div>
+                            <div data-value="relu">ReLU</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="graphs">
+            <h2>Visualizaciones</h2>
+            <!-- Contenedor de los canvases -->
+            <div style="position: relative; display: inline-block;">
+                <canvas id="perceptronCanvas" width="400" height="400"></canvas>
+                <canvas id="drawingCanvas" width="400" height="400"></canvas>
+            </div>
+            <canvas id="activationCanvas" width="400" height="200"></canvas>
+        </div>
+        <div class="output-group">
+            <h2>Salida</h2>
+            <div class="output">Y = <span id="outputValue">0</span></div>
+        </div>
+    </div>
+
+    <script>
+        // Obtener elementos del DOM
+        const input1Slider = document.getElementById('input1');
+        const input2Slider = document.getElementById('input2');
+        const weight1Slider = document.getElementById('weight1');
+        const weight2Slider = document.getElementById('weight2');
+        const biasSlider = document.getElementById('bias');
+        const activationSelect = document.getElementById('activation');
+        const selectSelected = document.querySelector('.select-selected');
+        const selectItems = document.querySelector('.select-items');
+
+        const input1Value = document.getElementById('input1Value');
+        const input2Value = document.getElementById('input2Value');
+        const weight1Value = document.getElementById('weight1Value');
+        const weight2Value = document.getElementById('weight2Value');
+        const biasValue = document.getElementById('biasValue');
+        const outputValue = document.getElementById('outputValue');
+
+        const perceptronCanvas = document.getElementById('perceptronCanvas');
+        const activationCanvas = document.getElementById('activationCanvas');
+        const drawingCanvas = document.getElementById('drawingCanvas');
+        const perceptronCtx = perceptronCanvas.getContext('2d');
+        const activationCtx = activationCanvas.getContext('2d');
+        const drawingCtx = drawingCanvas.getContext('2d');
+
+        // Ajustar el canvas de dibujo
+        drawingCanvas.width = perceptronCanvas.width;
+        drawingCanvas.height = perceptronCanvas.height;
+        drawingCanvas.style.width = perceptronCanvas.style.width;
+        drawingCanvas.style.height = perceptronCanvas.style.height;
+
+        // Valores iniciales
+        let x1 = parseFloat(input1Slider.value);
+        let x2 = parseFloat(input2Slider.value);
+        let w1 = parseFloat(weight1Slider.value);
+        let w2 = parseFloat(weight2Slider.value);
+        let bias = parseFloat(biasSlider.value);
+        let activationFunction = activationSelect.value;
+
+        // Funciones de activación
+        function stepFunction(x) {
+            return x >= 0 ? 1 : 0;
+        }
+
+        function sigmoidFunction(x) {
+            return 1 / (1 + Math.exp(-x));
+        }
+
+        function reluFunction(x) {
+            return Math.max(0, x);
+        }
+
+        // Actualizar valores y gráficas
+        function update() {
+            // Actualizar valores de las entradas y parámetros
+            x1 = parseFloat(input1Slider.value);
+            x2 = parseFloat(input2Slider.value);
+            w1 = parseFloat(weight1Slider.value);
+            w2 = parseFloat(weight2Slider.value);
+            bias = parseFloat(biasSlider.value);
+            activationFunction = activationSelect.value;
+
+            input1Value.textContent = x1;
+            input2Value.textContent = x2;
+            weight1Value.textContent = w1;
+            weight2Value.textContent = w2;
+            biasValue.textContent = bias;
+
+            selectSelected.textContent = activationSelect.options[activationSelect.selectedIndex].text;
+
+            // Calcular suma ponderada
+            let weightedSum = x1 * w1 + x2 * w2 + bias;
+
+            // Aplicar función de activación
+            let output;
+            if (activationFunction === 'step') {
+                output = stepFunction(weightedSum);
+            } else if (activationFunction === 'sigmoid') {
+                output = sigmoidFunction(weightedSum);
+            } else if (activationFunction === 'relu') {
+                output = reluFunction(weightedSum);
+            }
+
+            outputValue.textContent = output.toFixed(2);
+
+            // Actualizar gráficas
+            drawPerceptron();
+            drawActivationFunction(weightedSum, output);
+        }
+
+        // Dibujar perceptrón y regresión lineal
+        function drawPerceptron() {
+            perceptronCtx.clearRect(0, 0, perceptronCanvas.width, perceptronCanvas.height);
+
+            // Dibujar puntos de datos
+            perceptronCtx.fillStyle = 'blue';
+            perceptronCtx.beginPath();
+            perceptronCtx.arc(mapX(x1), mapY(x2), 5, 0, 2 * Math.PI);
+            perceptronCtx.fill();
+
+            // Dibujar línea de decisión
+            perceptronCtx.strokeStyle = 'red';
+            perceptronCtx.lineWidth = 2;
+            perceptronCtx.beginPath();
+            let xStart = -10;
+            let xEnd = 10;
+            let yStart = (-w1 * xStart - bias) / w2;
+            let yEnd = (-w1 * xEnd - bias) / w2;
+            perceptronCtx.moveTo(mapX(xStart), mapY(yStart));
+            perceptronCtx.lineTo(mapX(xEnd), mapY(yEnd));
+            perceptronCtx.stroke();
+
+            // Ejes
+            perceptronCtx.strokeStyle = '#ccc';
+            perceptronCtx.lineWidth = 1;
+            perceptronCtx.beginPath();
+            perceptronCtx.moveTo(mapX(0), mapY(-10));
+            perceptronCtx.lineTo(mapX(0), mapY(10));
+            perceptronCtx.moveTo(mapX(-10), mapY(0));
+            perceptronCtx.lineTo(mapX(10), mapY(0));
+            perceptronCtx.stroke();
+        }
+
+        // Mapear coordenadas para dibujar
+        function mapX(x) {
+            return ((x + 10) / 20) * perceptronCanvas.width;
+        }
+
+        function mapY(y) {
+            return perceptronCanvas.height - ((y + 10) / 20) * perceptronCanvas.height;
+        }
+
+        // Dibujar función de activación
+        function drawActivationFunction(weightedSum, output) {
+            activationCtx.clearRect(0, 0, activationCanvas.width, activationCanvas.height);
+
+            // Dibujar eje X y Y
+            activationCtx.strokeStyle = '#ccc';
+            activationCtx.lineWidth = 1;
+            activationCtx.beginPath();
+            activationCtx.moveTo(0, activationCanvas.height / 2);
+            activationCtx.lineTo(activationCanvas.width, activationCanvas.height / 2);
+            activationCtx.moveTo(activationCanvas.width / 2, 0);
+            activationCtx.lineTo(activationCanvas.width / 2, activationCanvas.height);
+            activationCtx.stroke();
+
+            // Dibujar función
+            activationCtx.strokeStyle = 'green';
+            activationCtx.lineWidth = 2;
+            activationCtx.beginPath();
+
+            for (let x = -10; x <= 10; x += 0.1) {
+                let y;
+                if (activationFunction === 'step') {
+                    y = stepFunction(x);
+                } else if (activationFunction === 'sigmoid') {
+                    y = sigmoidFunction(x);
+                } else if (activationFunction === 'relu') {
+                    y = reluFunction(x);
+                }
+
+                let canvasX = mapActivationX(x);
+                let canvasY = mapActivationY(y);
+
+                if (x === -10) {
+                    activationCtx.moveTo(canvasX, canvasY);
+                } else {
+                    activationCtx.lineTo(canvasX, canvasY);
+                }
+            }
+            activationCtx.stroke();
+
+            // Marcar punto actual
+            activationCtx.fillStyle = 'red';
+            activationCtx.beginPath();
+            activationCtx.arc(mapActivationX(weightedSum), mapActivationY(output), 5, 0, 2 * Math.PI);
+            activationCtx.fill();
+        }
+
+        // Mapear coordenadas para función de activación
+        function mapActivationX(x) {
+            return ((x + 10) / 20) * activationCanvas.width;
+        }
+
+        function mapActivationY(y) {
+            let maxY = activationFunction === 'relu' ? 10 : 1;
+            return activationCanvas.height - ((y + maxY / 2) / maxY) * activationCanvas.height;
+        }
+
+        // Eventos
+        input1Slider.addEventListener('input', update);
+        input2Slider.addEventListener('input', update);
+        weight1Slider.addEventListener('input', update);
+        weight2Slider.addEventListener('input', update);
+        biasSlider.addEventListener('input', update);
+        activationSelect.addEventListener('change', update);
+
+        // Inicializar
+        update();
+
+        // Funcionalidad del combo box moderno
+        selectSelected.textContent = activationSelect.options[activationSelect.selectedIndex].text;
+
+        selectSelected.addEventListener('click', function(e) {
+            e.stopPropagation();
+            closeAllSelect(this);
+            selectItems.style.display = selectItems.style.display === 'block' ? 'none' : 'block';
+            this.classList.toggle('select-arrow-active');
+        });
+
+        selectItems.addEventListener('click', function(e) {
+            if (e.target && e.target.nodeName === "DIV") {
+                let selectedValue = e.target.getAttribute('data-value');
+                activationSelect.value = selectedValue;
+                selectSelected.textContent = e.target.textContent;
+                selectItems.style.display = 'none';
+                selectSelected.classList.remove('select-arrow-active');
+                update();
+            }
+        });
+
+        function closeAllSelect(elmnt) {
+            if (elmnt !== selectSelected) {
+                selectItems.style.display = 'none';
+                selectSelected.classList.remove('select-arrow-active');
+            }
+        }
+
+        document.addEventListener('click', closeAllSelect);
+
+        // Funcionalidad de dibujo
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        drawingCanvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            [lastX, lastY] = getMousePos(drawingCanvas, e);
+        });
+
+        drawingCanvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            let [x, y] = getMousePos(drawingCanvas, e);
+            drawingCtx.strokeStyle = 'black';
+            drawingCtx.lineWidth = 2;
+            drawingCtx.beginPath();
+            drawingCtx.moveTo(lastX, lastY);
+            drawingCtx.lineTo(x, y);
+            drawingCtx.stroke();
+            [lastX, lastY] = [x, y];
+        });
+
+        drawingCanvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        drawingCanvas.addEventListener('mouseout', () => {
+            isDrawing = false;
+        });
+
+        // Obtener posición del mouse relativa al canvas
+        function getMousePos(canvas, evt) {
+            var rect = canvas.getBoundingClientRect();
+            return [
+                evt.clientX - rect.left,
+                evt.clientY - rect.top
+            ];
+        }
+    </script>
+</body>
+</html>
