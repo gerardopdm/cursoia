@@ -150,7 +150,7 @@
                     <input type="range" id="weight2" min="-20" max="20" step="0.1" value="1">
                 </div>
                 <div class="slider-group">
-                    <label for="bias">Bias (θ): <span id="biasValue">0</span></label>
+                    <label for="bias">Bias W<sub>0</sub>: <span id="biasValue">0</span></label>
                     <input type="range" id="bias" min="-30" max="30" step="0.1" value="0">
                 </div>
                 <div class="slider-group">
@@ -181,8 +181,10 @@
                 <canvas id="drawingCanvas" width="400" height="400"></canvas>
 				<div class="output">X<sub>1</sub>W<sub>1</sub> + X<sub>2</sub>W<sub>0</sub> + W<sub>0</sub>: <span id="weightedSumValue">0</span></div>
             </div>
-			
-            <canvas id="activationCanvas" width="400" height="200"></canvas>
+			<div style="position: relative; display: inline-block;">
+				<canvas id="activationCanvas" width="400" height="200"></canvas>
+				<div class="output">Función de activación</div>
+			</div>
         </div>
         <div class="output-group">
             <h2>Salida</h2>
