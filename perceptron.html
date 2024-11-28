@@ -123,7 +123,7 @@
 </head>
 <body>
 
-    <h1>Perceptrón Interactivo Mejorado</h1>
+    <h1>Perceptrón Interactivo</h1>
     <div class="container">
         <div class="controls">
             <!-- Grupo de Entradas -->
@@ -156,17 +156,19 @@
                 <div class="slider-group">
                     <label for="activation">Función de Activación:</label>
                     <div class="custom-select" id="activationSelect">
-                        <select id="activation">
-                            <option value="step">Escalón</option>
-                            <option value="sigmoid">Sigmoide</option>
-                            <option value="relu">ReLU</option>
-                        </select>
+						<select id="activation">
+							<option value="step">Escalón</option>
+							<option value="sigmoid">Sigmoide</option>
+							<option value="relu">ReLU</option>
+							<option value="identity">Identidad</option>
+						</select>
                         <div class="select-selected"></div>
-                        <div class="select-items">
-                            <div data-value="step">Escalón</div>
-                            <div data-value="sigmoid">Sigmoide</div>
-                            <div data-value="relu">ReLU</div>
-                        </div>
+						<div class="select-items">
+							<div data-value="step">Escalón</div>
+							<div data-value="sigmoid">Sigmoide</div>
+							<div data-value="relu">ReLU</div>
+							<div data-value="identity">Identidad</div>
+						</div>
                     </div>
                 </div>
             </div>
@@ -177,7 +179,9 @@
             <div style="position: relative; display: inline-block;">
                 <canvas id="perceptronCanvas" width="400" height="400"></canvas>
                 <canvas id="drawingCanvas" width="400" height="400"></canvas>
+				<div class="output">X<sub>1</sub>W<sub>1</sub> + X<sub>2</sub>W<sub>0</sub> + W<sub>0</sub>: <span id="weightedSumValue">0</span></div>
             </div>
+			
             <canvas id="activationCanvas" width="400" height="200"></canvas>
         </div>
         <div class="output-group">
@@ -238,43 +242,53 @@
             return Math.max(0, x);
         }
 
+		function identityFunction(x) {
+			return x;
+		}
+
         // Actualizar valores y gráficas
-        function update() {
-            // Actualizar valores de las entradas y parámetros
-            x1 = parseFloat(input1Slider.value);
-            x2 = parseFloat(input2Slider.value);
-            w1 = parseFloat(weight1Slider.value);
-            w2 = parseFloat(weight2Slider.value);
-            bias = parseFloat(biasSlider.value);
-            activationFunction = activationSelect.value;
+		function update() {
+			// Actualizar valores de las entradas y parámetros
+			x1 = parseFloat(input1Slider.value);
+			x2 = parseFloat(input2Slider.value);
+			w1 = parseFloat(weight1Slider.value);
+			w2 = parseFloat(weight2Slider.value);
+			bias = parseFloat(biasSlider.value);
+			activationFunction = activationSelect.value;
 
-            input1Value.textContent = x1;
-            input2Value.textContent = x2;
-            weight1Value.textContent = w1;
-            weight2Value.textContent = w2;
-            biasValue.textContent = bias;
+			input1Value.textContent = x1;
+			input2Value.textContent = x2;
+			weight1Value.textContent = w1;
+			weight2Value.textContent = w2;
+			biasValue.textContent = bias;
 
-            selectSelected.textContent = activationSelect.options[activationSelect.selectedIndex].text;
+			selectSelected.textContent = activationSelect.options[activationSelect.selectedIndex].text;
 
-            // Calcular suma ponderada
-            let weightedSum = x1 * w1 + x2 * w2 + bias;
+			// Calcular suma ponderada
+			let weightedSum = x1 * w1 + x2 * w2 + bias;
 
-            // Aplicar función de activación
-            let output;
-            if (activationFunction === 'step') {
-                output = stepFunction(weightedSum);
-            } else if (activationFunction === 'sigmoid') {
-                output = sigmoidFunction(weightedSum);
-            } else if (activationFunction === 'relu') {
-                output = reluFunction(weightedSum);
-            }
+			// Mostrar la suma ponderada
+			const weightedSumValue = document.getElementById('weightedSumValue');
+			weightedSumValue.textContent = weightedSum.toFixed(2);
 
-            outputValue.textContent = output.toFixed(2);
+			// Aplicar función de activación
+			let output;
+			if (activationFunction === 'step') {
+				output = stepFunction(weightedSum);
+			} else if (activationFunction === 'sigmoid') {
+				output = sigmoidFunction(weightedSum);
+			} else if (activationFunction === 'relu') {
+				output = reluFunction(weightedSum);
+			} else if (activationFunction === 'identity') {
+				output = identityFunction(weightedSum);
+			}
 
-            // Actualizar gráficas
-            drawPerceptron();
-            drawActivationFunction(weightedSum, output);
-        }
+			outputValue.textContent = output.toFixed(2);
+
+			// Actualizar gráficas
+			drawPerceptron();
+			drawActivationFunction(weightedSum, output);
+		}
 
         // Dibujar perceptrón y regresión lineal
         function drawPerceptron() {
@@ -339,13 +353,15 @@
 
             for (let x = -10; x <= 10; x += 0.1) {
                 let y;
-                if (activationFunction === 'step') {
-                    y = stepFunction(x);
-                } else if (activationFunction === 'sigmoid') {
-                    y = sigmoidFunction(x);
-                } else if (activationFunction === 'relu') {
-                    y = reluFunction(x);
-                }
+				if (activationFunction === 'step') {
+					y = stepFunction(x);
+				} else if (activationFunction === 'sigmoid') {
+					y = sigmoidFunction(x);
+				} else if (activationFunction === 'relu') {
+					y = reluFunction(x);
+				} else if (activationFunction === 'identity') {
+					y = identityFunction(x);
+				}
 
                 let canvasX = mapActivationX(x);
                 let canvasY = mapActivationY(y);
